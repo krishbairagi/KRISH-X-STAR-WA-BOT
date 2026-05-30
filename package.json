@@ -1,0 +1,16 @@
+{
+  "name": "krish-wa-music-bot",
+  "version": "1.0.0",
+  "description": "WhatsApp Music Bot By KRISH X STAR",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "latest",
+    "axios": "latest",
+    "yt-search": "latest",
+    "ytdl-core": "latest",
+    "pino": "latest"
+  }
+}
