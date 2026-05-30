@@ -1,0 +1,144 @@
+// =========================================
+// RAIPUR MUSIC WORLD BOT
+// CREATED BY KRISH X STAR
+// OWNER USERNAME : @iwanthotpinkpussy
+// PUBLIC SOURCE CODE
+// =========================================
+
+const {
+  default: makeWASocket,
+  useMultiFileAuthState
+} = require("@whiskeysockets/baileys")
+
+const P = require("pino")
+const fs = require("fs")
+const yts = require("yt-search")
+const ytdl = require("ytdl-core")
+
+const PREFIX = "/"
+const BOT_NAME = "RAIPUR MUSIC WORLD BOT"
+const OWNER_NAME = "KRISH X STAR"
+const OWNER_USERNAME = "@iwanthotpinkpussy"
+
+async function downloadSong(query) {
+
+  const search = await yts(query)
+  const video = search.videos[0]
+
+  if (!video) return null
+
+  const stream = ytdl(video.url, {
+    filter: "audioonly"
+  })
+
+  const path = "song.mp3"
+
+  const write = fs.createWriteStream(path)
+
+  stream.pipe(write)
+
+  return new Promise((resolve) => {
+    write.on("finish", () => {
+      resolve({
+        title: video.title,
+        path
+      })
+    })
+  })
+}
+
+async function startBot() {
+
+  const { state, saveCreds } = await useMultiFileAuthState("session")
+
+  const sock = makeWASocket({
+    logger: P({ level: "silent" }),
+    auth: state
+  })
+
+  sock.ev.on("creds.update", saveCreds)
+
+  sock.ev.on("messages.upsert", async ({ messages }) => {
+
+    const m = messages[0]
+
+    if (!m.message) return
+
+    const msg =
+      m.message.conversation ||
+      m.message.extendedTextMessage?.text ||
+      ""
+
+    const from = m.key.remoteJid
+
+    if (!msg.startsWith(PREFIX)) return
+
+    const args = msg.slice(1).trim().split(" ")
+    const command = args.shift().toLowerCase()
+
+    // =========================================
+    // PING COMMAND
+    // =========================================
+
+    if (command === "ping") {
+      await sock.sendMessage(from, {
+        text: `✅ ${BOT_NAME} ONLINE`
+      })
+    }
+
+    // =========================================
+    // PLAY COMMAND
+    // =========================================
+
+    if (command === "play") {
+
+      const query = args.join(" ")
+
+      if (!query) {
+        return sock.sendMessage(from, {
+          text: "❌ Example: /play alan walker"
+        })
+      }
+
+      await sock.sendMessage(from, {
+        text: `🎵 Searching Song: ${query}`
+      })
+
+      try {
+
+        const data = await downloadSong(query)
+
+        if (!data) {
+          return sock.sendMessage(from, {
+            text: "❌ Song Not Found"
+          })
+        }
+
+        await sock.sendMessage(from, {
+          audio: fs.readFileSync(data.path),
+          mimetype: "audio/mp4",
+          ptt: false
+        })
+
+        fs.unlinkSync(data.path)
+
+      } catch (e) {
+
+        console.log(e)
+
+        await sock.sendMessage(from, {
+          text: "❌ Error While Downloading Song"
+        })
+      }
+    }
+
+  })
+
+  console.log("====================================")
+  console.log(" RAIPUR MUSIC WORLD BOT STARTED ")
+  console.log(" CREATED BY KRISH X STAR ")
+  console.log("====================================")
+
+}
+
+startBot()
